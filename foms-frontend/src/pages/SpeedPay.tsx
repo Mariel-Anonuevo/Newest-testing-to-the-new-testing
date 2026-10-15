@@ -10,7 +10,7 @@ import { speedpayService } from '../services/speedpayService';
 import { paymentsService } from '../services/paymentsService';
 import { useQuery } from '../hooks/useQuery';
 import { Invoice, Client, SpeedPaySubmission } from '../types/entities';
-import { formatCurrency } from '../utils/format';
+import { formatCurrency, formatBillingPeriod } from '../utils/format';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 import './LoginPage.css';
 
@@ -737,7 +737,7 @@ export const SpeedPay: React.FC = () => {
 
                       <div style={{ marginBottom: 28 }}>
                         <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 4, fontWeight: 600 }}>Billing Period</div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: '#0F172A' }}>{foundInvoice.billingPeriod}</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#0F172A' }}>{formatBillingPeriod(foundInvoice.billingPeriod)}</div>
                       </div>
 
                       <div style={{ borderTop: '1px solid #E2E8F0', padding: '16px 0', display: 'flex', justifyContent: 'space-between' }}>
@@ -839,7 +839,7 @@ export const SpeedPay: React.FC = () => {
                 <div style={{ border: '1px solid #E2E8F0', borderRadius: 10, overflow: 'hidden', marginBottom: 20 }}>
                   {[
                     { label: 'Invoice No.', value: foundInvoice.invoiceNumber },
-                    { label: 'Billing Period', value: foundInvoice.billingPeriod },
+                    { label: 'Billing Period', value: formatBillingPeriod(foundInvoice.billingPeriod) },
                     { label: 'Base Amount', value: formatCurrency(foundInvoice.amount) },
                     { label: 'VAT (12%)', value: formatCurrency(foundInvoice.vatAmount) },
                     { label: 'Surcharge', value: formatCurrency(foundInvoice.surchargeAmount) },

@@ -532,42 +532,21 @@ export const AIDuplicateScan: React.FC = () => {
             marginBottom: '24px',
           }}
         >
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+          <div style={{ marginBottom: '20px', maxWidth: '320px' }}>
             {/* Document Type Picker */}
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                Document Type *
-              </label>
-              <select
-                value={docType}
-                onChange={e => setDocType(e.target.value)}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.85rem', color: '#0F172A' }}
-              >
-                <option value="Invoice">Invoice</option>
-                <option value="Official Receipt">Official Receipt</option>
-                <option value="Payment Proof">Payment Proof</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-
-            {/* Optional Client Link */}
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                Link Client Account (Optional)
-              </label>
-              <select
-                value={selectedClientId}
-                onChange={e => setSelectedClientId(e.target.value)}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.85rem', color: '#0F172A' }}
-              >
-                <option value="">No specific client selected</option>
-                {clients.map(c => (
-                  <option key={c.id} value={c.id}>
-                    {c.clientCode ? `${c.clientCode} - ` : ''}{c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+              Document Type *
+            </label>
+            <select
+              value={docType}
+              onChange={e => setDocType(e.target.value)}
+              style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.85rem', color: '#0F172A' }}
+            >
+              <option value="Invoice">Invoice</option>
+              <option value="Official Receipt">Official Receipt</option>
+              <option value="Payment Proof">Payment Proof</option>
+              <option value="Other">Other</option>
+            </select>
           </div>
 
           {/* Dashed Upload Area */}

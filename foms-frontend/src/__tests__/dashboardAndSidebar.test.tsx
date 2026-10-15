@@ -120,18 +120,18 @@ describe('Job B & Job A: Sidebar and Dashboard Verification Suite', () => {
       expect(allLabels).toContain('SpeedPay Validation');
       expect(allLabels).toContain('Official Receipts');
       expect(allLabels).toContain('Settlements');
-      expect(allLabels).toContain('Record Settlement');
+      expect(allLabels).not.toContain('Record Settlement');
       expect(allLabels).toContain('Financial Adjustments');
       expect(allLabels).toContain('Duplicate Scan');
       expect(allLabels).toContain('Unique Documents');
       expect(allLabels).toContain('Flagged');
       expect(allLabels).toContain('Review History');
-      expect(allLabels).toContain('Document Extraction');
+      expect(allLabels).not.toContain('Document Extraction');
       expect(allLabels).toContain('Reports');
       expect(allLabels).toContain('AI Output History');
 
-      // Total nav items for Accountant must be exactly 19 (21 minus rates and waybills)
-      expect(allLabels).toHaveLength(19);
+      // Total nav items for Accountant is 17 (after removing Document Extraction and consolidating Record Settlement)
+      expect(allLabels).toHaveLength(17);
 
       // Render actual Sidebar component
       render(
@@ -345,10 +345,10 @@ describe('Job B & Job A: Sidebar and Dashboard Verification Suite', () => {
   // ──────────────────────────────────────────────────────────────────────────
   describe('Sidebar Badge Removal: All 4 Roles render 0 badges and all menu items intact', () => {
     const rolesToTest = [
-      { role: ROLES.ACCOUNTANT, name: 'Accountant', expectedItemCount: 19 },
-      { role: ROLES.HEAD_ACCOUNTANT, name: 'Head Accountant', expectedItemCount: 16 },
-      { role: ROLES.ASSISTANT_FM, name: 'Assistant FM', expectedItemCount: 9 },
-      { role: ROLES.FINANCIAL_MANAGER, name: 'Financial Manager', expectedItemCount: 22 },
+      { role: ROLES.ACCOUNTANT, name: 'Accountant', expectedItemCount: 17 },
+      { role: ROLES.HEAD_ACCOUNTANT, name: 'Head Accountant', expectedItemCount: 15 },
+      { role: ROLES.ASSISTANT_FM, name: 'Assistant FM', expectedItemCount: 8 },
+      { role: ROLES.FINANCIAL_MANAGER, name: 'Financial Manager', expectedItemCount: 21 },
     ];
 
     rolesToTest.forEach(({ role, name, expectedItemCount }) => {

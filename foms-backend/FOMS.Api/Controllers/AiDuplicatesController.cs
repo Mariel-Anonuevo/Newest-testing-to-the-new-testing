@@ -468,7 +468,7 @@ public class AiDuplicatesController : ApiControllerBase
 
     [HttpPost("validate")]
     [HttpPost("/api/ai/documents/validate")]
-    public async Task<IActionResult> ValidateDocument([FromForm] IFormFile? file, [FromForm] IFormFile? document)
+    public async Task<IActionResult> ValidateDocument(IFormFile? file, IFormFile? document)
     {
         IFormFile? targetFile = file ?? document;
         if (targetFile == null && Request.HasFormContentType && Request.Form.Files.Count > 0)
@@ -511,7 +511,7 @@ public class AiDuplicatesController : ApiControllerBase
 
     [HttpPost("scan")]
     [HttpPost("/api/ai/documents/scan")]
-    public async Task<IActionResult> ScanDocument([FromForm] IFormFile? file, [FromForm] IFormFile? document, [FromQuery] string? scope)
+    public async Task<IActionResult> ScanDocument(IFormFile? file, IFormFile? document, [FromQuery] string? scope)
     {
         IFormFile? targetFile = file ?? document;
         if (targetFile == null && Request.HasFormContentType && Request.Form.Files.Count > 0)

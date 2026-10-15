@@ -63,7 +63,8 @@ def test_calculate_collection_priorities_high(db_session):
     }]
     
     processed, updated = calculate_collection_priorities(db_session, ar_data, [])
-    assert priority := db_session.query(AICollectionPriority).first()
+    priority = db_session.query(AICollectionPriority).first()
+    assert priority is not None
     assert priority.priority_level == "High"
 
 def test_calculate_collection_priorities_due_soon(db_session):

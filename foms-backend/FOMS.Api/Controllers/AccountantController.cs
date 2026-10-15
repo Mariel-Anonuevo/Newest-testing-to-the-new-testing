@@ -748,7 +748,7 @@ public class AccountantController : ControllerBase
 
     // 12. Document Extraction
     [HttpPost("ai/document-extraction")]
-    public async Task<IActionResult> DocumentExtraction([FromForm] IFormFile? file)
+    public async Task<IActionResult> DocumentExtraction(IFormFile? file)
     {
         if (file == null || file.Length == 0)
             return BadRequest(new { success = false, message = "File is required for document extraction." });

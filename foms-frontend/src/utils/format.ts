@@ -85,13 +85,22 @@ interface CalendarDate {
 function parseCalendarDate(val: string): CalendarDate | null {
   if (!val) return null;
   const str = val.trim();
-  const match = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-  if (match) {
-    const year = parseInt(match[1], 10);
-    const month = parseInt(match[2], 10);
-    const day = parseInt(match[3], 10);
+  const matchIso = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (matchIso) {
+    const year = parseInt(matchIso[1], 10);
+    const month = parseInt(matchIso[2], 10);
+    const day = parseInt(matchIso[3], 10);
     if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
       return { year, month, day };
+    }
+  }
+  const matchMonthWord = str.match(/^([A-Za-z]{3,9})\.?\s+(\d{1,2}),?\s*(\d{4})/);
+  if (matchMonthWord) {
+    const monthIdx = MONTH_NAMES.findIndex(m => m.toLowerCase() === matchMonthWord[1].substring(0, 3).toLowerCase());
+    if (monthIdx !== -1) {
+      const day = parseInt(matchMonthWord[2], 10);
+      const year = parseInt(matchMonthWord[3], 10);
+      return { year, month: monthIdx + 1, day };
     }
   }
   const d = new Date(str);
@@ -119,12 +128,19 @@ export function formatBillingPeriod(start?: string | null, end?: string | null):
     }
   }
 
-  if (!s || !e) return '-';
+  if (!s && !e) return '-';
+  if (s && !e) {
+    const d1 = parseCalendarDate(s);
+    if (d1) return `${MONTH_NAMES[d1.month - 1]} ${d1.day}, ${d1.year}`;
+    return s;
+  }
 
   const d1 = parseCalendarDate(s);
   const d2 = parseCalendarDate(e);
 
-  if (!d1 || !d2) return '-';
+  if (!d1 || !d2) {
+    return s && e ? `${s} - ${e}` : (s || e || '-');
+  }
 
   const m1 = MONTH_NAMES[d1.month - 1];
   const m2 = MONTH_NAMES[d2.month - 1];

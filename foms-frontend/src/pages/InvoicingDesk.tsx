@@ -280,8 +280,7 @@ export const InvoicingDesk: React.FC = () => {
         {/* Header Row: Title & View Mode Toggle */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0F172A' }}>Invoicing Desk</h2>
-            <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: '#64748B' }}>Client sales invoices, status tracking, and dispatch records</p>
+            <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748B' }}>Client sales invoices, status tracking, and dispatch records</p>
           </div>
 
           {/* Cards vs Table View Switcher */}

@@ -322,8 +322,7 @@ export const SpeedPayValidation: React.FC = () => {
         {/* Header Row: Title & View Mode Toggle */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0F172A' }}>SpeedPay Validations</h2>
-            <div style={{ margin: '4px 0 0', fontSize: '0.82rem', color: '#92400E', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ fontSize: '0.82rem', color: '#92400E', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
               <i className="ti ti-info-circle" style={{ color: '#F59E0B', fontSize: 15 }} />
               <span><strong>Validation Policy:</strong> Confirm that the submitted amount matches invoice total before approving.</span>
             </div>

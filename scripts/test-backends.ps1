@@ -23,8 +23,21 @@ function Report-Result($testName, $passed, $details = "") {
 # ---------------------------------------------------------------------
 # 1. Check Docker Containers
 # ---------------------------------------------------------------------
-Write-Host "1. Checking Docker Containers..." -ForegroundColor Yellow
-$containers = @("foms-mssql", "foms-postgres", "foms-mongodb", "foms-pgadmin")
+Write-Host "1. Checking Database Services & Containers..." -ForegroundColor Yellow
+$containers = @("foms-postgres", "foms-mongodb", "foms-pgadmin")
+
+# Check MSSQL Service (Host SQLEXPRESS or Docker)
+$sqlService = Get-Service -Name "MSSQL`$SQLEXPRESS" -ErrorAction SilentlyContinue
+if ($sqlService -and $sqlService.Status -eq "Running") {
+    Report-Result "MSSQL Host Service (SQLEXPRESS)" $true "Status: Running"
+} else {
+    $mssqlDocker = docker inspect -f '{{.State.Status}}' "foms-mssql" 2>$null
+    if ($mssqlDocker -eq "running") {
+        Report-Result "Container foms-mssql" $true "Status: running"
+    } else {
+        Report-Result "MSSQL Service" $false "Neither host SQLEXPRESS nor foms-mssql container is running"
+    }
+}
 
 foreach ($c in $containers) {
     $status = docker inspect -f '{{.State.Status}}' $c 2>$null
@@ -42,18 +55,29 @@ Write-Host ""
 # ---------------------------------------------------------------------
 Write-Host "2. Checking Databases Connectivity & Data..." -ForegroundColor Yellow
 
-# MSSQL Check
+# MSSQL Check (Host SQLEXPRESS or Docker)
 try {
-    $mssqlCheck = docker exec -i foms-mssql /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "Postgres2026!" -d FOMS_DB -C -h -1 -W -Q "SET NOCOUNT ON; SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE';" 2>$null
-    $rawMssql = ($mssqlCheck | Out-String).Trim()
-    if ($rawMssql -match "(\d+)") {
-        $count = [int]$matches[1]
-        Report-Result "MSSQL (FOMS_DB)" $true "Found $count tables in FOMS_DB"
-    } else {
-        Report-Result "MSSQL (FOMS_DB)" $false "Could not count tables. Output: $rawMssql"
-    }
+    $c = New-Object System.Data.SqlClient.SqlConnection("Server=localhost\SQLEXPRESS;Database=FOMS_DB;Integrated Security=True;TrustServerCertificate=True;")
+    $c.Open()
+    $cmd = $c.CreateCommand()
+    $cmd.CommandText = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE'"
+    $count = $cmd.ExecuteScalar()
+    $c.Close()
+    Report-Result "MSSQL (FOMS_DB)" $true "Found $count tables in FOMS_DB (Connected to localhost\SQLEXPRESS)"
 } catch {
-    Report-Result "MSSQL (FOMS_DB)" $false $_.Exception.Message
+    # Fallback to docker if host connection failed
+    try {
+        $mssqlCheck = docker exec -i foms-mssql /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "Postgres2026!" -d FOMS_DB -C -h -1 -W -Q "SET NOCOUNT ON; SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE';" 2>$null
+        $rawMssql = ($mssqlCheck | Out-String).Trim()
+        if ($rawMssql -match "(\d+)") {
+            $count = [int]$matches[1]
+            Report-Result "MSSQL (FOMS_DB)" $true "Found $count tables in FOMS_DB"
+        } else {
+            Report-Result "MSSQL (FOMS_DB)" $false "Could not count tables. Host error: $($_.Exception.Message); Docker output: $rawMssql"
+        }
+    } catch {
+        Report-Result "MSSQL (FOMS_DB)" $false $_.Exception.Message
+    }
 }
 
 # PostgreSQL Check
@@ -71,12 +95,20 @@ try {
 
 # MongoDB Check
 try {
-    $mongoCheck = docker exec -i foms-mongodb mongosh -u root -p "MongoRoot2026!" --authenticationDatabase admin --eval "db.getSiblingDB('foms_trends_db').getCollectionNames().length" 2>$null
+    $mongoPass = "mongo_password_2026"
+    $mongoCheck = docker exec -i foms-mongodb mongosh -u root -p $mongoPass --authenticationDatabase admin --eval "db.getSiblingDB('foms_trends_db').getCollectionNames().length" 2>$null
     $collCount = ($mongoCheck | Select-String -Pattern "^\d+$" | Select-Object -Last 1).Line.Trim()
     if ($collCount -match "^\d+$" -and [int]$collCount -gt 0) {
         Report-Result "MongoDB (foms_trends_db)" $true "Found $collCount collections"
     } else {
-        Report-Result "MongoDB (foms_trends_db)" $false "Output: $mongoCheck"
+        # Try alternate password
+        $mongoCheck2 = docker exec -i foms-mongodb mongosh -u root -p "MongoRoot2026!" --authenticationDatabase admin --eval "db.getSiblingDB('foms_trends_db').getCollectionNames().length" 2>$null
+        $collCount2 = ($mongoCheck2 | Select-String -Pattern "^\d+$" | Select-Object -Last 1).Line.Trim()
+        if ($collCount2 -match "^\d+$" -and [int]$collCount2 -gt 0) {
+            Report-Result "MongoDB (foms_trends_db)" $true "Found $collCount2 collections"
+        } else {
+            Report-Result "MongoDB (foms_trends_db)" $false "Output: $mongoCheck"
+        }
     }
 } catch {
     Report-Result "MongoDB (foms_trends_db)" $false $_.Exception.Message

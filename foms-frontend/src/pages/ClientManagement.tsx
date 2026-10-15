@@ -20,9 +20,38 @@ import { Dropdown } from '../components/Dropdown';
 import { Users, FileText, Phone, Mail, MapPin, Calendar as CalIcon, Hash, Settings, CreditCard } from 'lucide-react';
 import { CalendarPicker } from '../components/FormModals';
 import { computeFreightCost } from '../utils/billing';
-import { formatCurrency, formatDate } from '../utils/format';
+import { formatCurrency, formatDate, formatBillingPeriod } from '../utils/format';
+import './ClientManagement.css';
 
-export const ClientManagement: React.FC = () => {
+class ClientManagementErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: any }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error('ClientManagement caught error:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '32px', textAlign: 'center', background: '#fff', borderRadius: '12px', margin: '24px', border: '1px solid #FCA5A5' }}>
+          <i className="ti ti-alert-triangle" style={{ fontSize: '36px', color: '#DC2626', marginBottom: '12px', display: 'block' }} />
+          <h3 style={{ margin: '0 0 8px', color: '#0F172A' }}>An error occurred displaying this client record</h3>
+          <p style={{ color: '#64748B', fontSize: '0.9rem', marginBottom: '16px' }}>{String(this.state.error?.message || 'Unexpected display error')}</p>
+          <button onClick={() => { this.setState({ hasError: false, error: null }); window.location.reload(); }} style={{ padding: '8px 18px', background: '#0D9488', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 600, cursor: 'pointer' }}>
+            Reload Client Management
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+const ClientManagementInner: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -42,7 +71,9 @@ export const ClientManagement: React.FC = () => {
 
   // List view state
   const [isAddingNew, setIsAddingNew] = useState(false);
+  const [quickViewClient, setQuickViewClient] = useState<Client | null>(null);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const [billingViewMode, setBillingViewMode] = useState<'cards' | 'table'>('cards');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
 
@@ -134,14 +165,14 @@ export const ClientManagement: React.FC = () => {
                 <p class="info-p"><strong>Client TIN:</strong> ${editingClient?.tin || (editingClient as any)?.TIN || selectedReceiptForModal.clientTin || 'N/A'}</p>
               </div>
               <div class="text-right">
-                <p class="info-p"><strong>Date:</strong> ${new Date(selectedReceiptForModal.recordedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+                <p class="info-p"><strong>Date:</strong> ${formatDate(selectedReceiptForModal.recordedAt || selectedReceiptForModal.paymentDate || new Date())}</p>
                 <p class="info-p"><strong>O.R. No.:</strong> <span class="highlight">${selectedReceiptForModal.orNumber || selectedReceiptForModal.referenceNumber || selectedReceiptForModal.id}</span></p>
-                <p class="info-p"><strong>Method:</strong> ${selectedReceiptForModal.paymentMethod}</p>
+                <p class="info-p"><strong>Method:</strong> ${selectedReceiptForModal.paymentMethod || 'N/A'}</p>
               </div>
             </div>
             
             <p class="amount-text">
-              Received the sum of <span class="amount-val">PHP ${selectedReceiptForModal.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> in partial/full payment of <strong>Invoice No. ${selectedReceiptForModal.invoiceNumber || selectedReceiptForModal.invoiceId || 'N/A'}</strong>.
+              Received the sum of <span class="amount-val">PHP ${(Number(selectedReceiptForModal.amount) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> in partial/full payment of <strong>Invoice No. ${selectedReceiptForModal.invoiceNumber || selectedReceiptForModal.invoiceId || 'N/A'}</strong>.
             </p>
             
             <div class="sign-area">
@@ -297,11 +328,35 @@ export const ClientManagement: React.FC = () => {
 
             {/* Client Profile */}
             <div style={{ background: '#fff', border: '1px solid #E2E8F0', padding: '24px', borderRadius: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Users size={18} color="#64748B" />
+                  <Users size={18} color="#0D9488" />
                   <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#0F172A' }}>Client Profile</h3>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setIsEditMode(true)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 16px',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    background: '#0D9488',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 4px rgba(13, 148, 136, 0.2)',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = '#0F766E')}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = '#0D9488')}
+                >
+                  <i className="ti ti-edit" style={{ fontSize: '16px' }} />
+                  Edit Client Info
+                </button>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
@@ -346,7 +401,7 @@ export const ClientManagement: React.FC = () => {
                   <p style={{ margin: '0 0 4px', fontSize: '0.75rem', fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase' }}>Address</p>
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
                     <MapPin size={14} color="#94A3B8" style={{ marginTop: '2px' }} />
-                    <p style={{ margin: 0, fontSize: '0.9rem', color: '#334155', fontWeight: 500 }}>{editingClient.address}</p>
+                    <p style={{ margin: 0, fontSize: '0.9rem', color: '#334155', fontWeight: 500 }}>{editingClient?.address || selectedReceiptForModal.clientAddress || 'Metro Manila, Philippines'}</p>
                   </div>
                 </div>
 
@@ -362,45 +417,12 @@ export const ClientManagement: React.FC = () => {
 
             {/* Billing History Card */}
             <div style={{ background: '#fff', border: '1px solid #E2E8F0', padding: '24px', borderRadius: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <FileText size={18} color="#F59E0B" />
                   <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#0F172A' }}>Billing History</h3>
                 </div>
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748B' }}>Year:</label>
-                    <select
-                      value={billingYearFilter}
-                      onChange={(e) => {
-                        const yr = e.target.value;
-                        setBillingYearFilter(yr);
-                        if (yr) {
-                          setBillingDateFrom(`${yr}-01-01`);
-                          setBillingDateTo(`${yr}-12-31`);
-                        } else {
-                          setBillingDateFrom('');
-                          setBillingDateTo('');
-                        }
-                      }}
-                      style={{
-                        padding: '6px 10px',
-                        borderRadius: 6,
-                        border: '1px solid #E2E8F0',
-                        fontSize: '0.8rem',
-                        fontWeight: 600,
-                        color: '#0F172A',
-                        background: '#F8FAFC',
-                        outline: 'none',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      <option value="">All Retained Years (5 Yrs)</option>
-                      {retentionYears.map(yr => (
-                        <option key={yr} value={yr.toString()}>{yr}</option>
-                      ))}
-                    </select>
-                  </div>
                   <CalendarPicker
                     label="From:"
                     placeholder="Start date..."
@@ -431,61 +453,244 @@ export const ClientManagement: React.FC = () => {
                     maxDate={maxAllowedDate}
                     variant="toolbar"
                   />
+
+                  {/* View Mode Toggle: Cards vs Table on the far right */}
+                  <div style={{ display: 'inline-flex', borderRadius: '8px', border: '1px solid #E2E8F0', overflow: 'hidden', background: '#F8FAFC' }}>
+                    <button
+                      type="button"
+                      onClick={() => setBillingViewMode('cards')}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '6px 14px',
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                        border: 'none',
+                        cursor: 'pointer',
+                        background: billingViewMode === 'cards' ? '#0D9488' : 'transparent',
+                        color: billingViewMode === 'cards' ? '#FFFFFF' : '#64748B',
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      <i className="ti ti-layout-grid" style={{ fontSize: '15px' }} />
+                      Cards
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBillingViewMode('table')}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '6px 14px',
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                        border: 'none',
+                        cursor: 'pointer',
+                        background: billingViewMode === 'table' ? '#0D9488' : 'transparent',
+                        color: billingViewMode === 'table' ? '#FFFFFF' : '#64748B',
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      <i className="ti ti-table" style={{ fontSize: '15px' }} />
+                      Table
+                    </button>
+                  </div>
                 </div>
               </div>
-              <div style={{ borderRadius: '8px', overflow: 'visible' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                  <thead style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', borderTop: '1px solid #E2E8F0' }}>
-                    <tr>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 600 }}>Invoice No.</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 600 }}>Invoice Date</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 600 }}>Billing Period</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 600 }}>Waybill Count</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 600 }}>Total Amount</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 600 }}>Status</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'center', color: '#475569', fontWeight: 600 }}>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredBilledInvoices.length > 0 ? (
-                      filteredBilledInvoices.map(inv => (
-                        <tr key={inv.id} style={{ borderBottom: '1px solid #E2E8F0', background: 'transparent' }}>
-                          <td style={{ padding: '12px 16px', color: '#0F172A', fontWeight: 600 }}>
-                            {inv.invoiceNumber}
-                          </td>
-                          <td style={{ padding: '12px 16px', color: '#475569' }}>{new Date(inv.createdAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}</td>
-                          <td style={{ padding: '12px 16px', color: '#475569' }}>{inv.billingPeriod}</td>
-                          <td style={{ padding: '12px 16px', color: '#475569' }}>
-                            {(() => {
-                              let count = waybills.filter(w => w.invoiceId === inv.id || w.invoiceId === inv.invoiceNumber || inv.waybillIds?.includes(w.id)).length;
-                              if (count === 0) count = waybills.filter(w => w.clientCode === inv.clientId).length;
-                              return count > 0 ? count : (inv.waybillIds?.length || 0);
-                            })()}
-                          </td>
-                          <td style={{ padding: '12px 16px', color: '#0F172A', fontWeight: 600 }}>₱ {inv.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                          <td style={{ padding: '12px 16px' }}><StatusBadge status={inv.status} /></td>
-                          <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                            <Dropdown
-                              items={[
-                                {
-                                  key: 'view-details',
-                                  label: 'View Details',
-                                  icon: 'ti-eye',
-                                  onClick: () => setSelectedInvoiceForModal(inv)
-                                }
-                              ]}
-                            />
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
+
+              {billingViewMode === 'cards' ? (
+                filteredBilledInvoices.length > 0 ? (
+                  <div className="billing-history-cards-grid">
+                    {filteredBilledInvoices.map(inv => {
+                      let waybillCount = waybills.filter(w => w.invoiceId === inv.id || w.invoiceId === inv.invoiceNumber || inv.waybillIds?.includes(w.id)).length;
+                      if (waybillCount === 0) waybillCount = waybills.filter(w => w.clientCode === inv.clientId).length;
+                      if (waybillCount === 0) waybillCount = inv.waybillIds?.length || 0;
+
+                      return (
+                        <div key={inv.id} className="billing-history-card">
+                          <div className="billing-card-header">
+                            <span className="billing-card-inv-no">
+                              <i className="ti ti-receipt" style={{ color: '#0D9488' }} />
+                              {inv.invoiceNumber}
+                            </span>
+                            <StatusBadge status={inv.status} />
+                          </div>
+
+                          <div className="billing-card-amount-box">
+                            <span className="billing-card-amount-label">Total Amount</span>
+                            <span className="billing-card-amount-val">
+                              ₱{inv.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          </div>
+
+                          <div className="billing-card-details">
+                            <div className="billing-card-detail-row">
+                              <i className="ti ti-calendar billing-card-detail-icon" />
+                              <span>Invoice Date: <strong>{formatDate(inv.createdAt)}</strong></span>
+                            </div>
+                            <div className="billing-card-detail-row">
+                              <i className="ti ti-calendar-event billing-card-detail-icon" />
+                              <span>Billing Period: <strong>{formatBillingPeriod(inv.billingPeriod)}</strong></span>
+                            </div>
+                            <div className="billing-card-detail-row">
+                              <i className="ti ti-package billing-card-detail-icon" />
+                              <span>Waybill Count: <strong>{waybillCount} waybill{waybillCount !== 1 ? 's' : ''}</strong></span>
+                            </div>
+                          </div>
+
+                          {(() => {
+                            const isPaid = inv.status === 'Paid' || (inv as any).paymentStatus === 'Paid';
+                            return (
+                              <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                                <button
+                                  type="button"
+                                  className="billing-card-btn-view"
+                                  onClick={() => setSelectedInvoiceForModal(inv)}
+                                  style={{ flex: 1 }}
+                                >
+                                  <i className="ti ti-eye" />
+                                  View Details
+                                </button>
+                                {isPaid && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const pay = payments.find(p => p.invoiceId === inv.id || p.invoiceId === inv.invoiceNumber || p.invoiceNumber === inv.invoiceNumber) || {
+                                        id: inv.id,
+                                        orNumber: `OR-${inv.invoiceNumber || inv.id}`,
+                                        clientId: inv.clientId,
+                                        clientName: editingClient?.name,
+                                        invoiceId: inv.id,
+                                        invoiceNumber: inv.invoiceNumber,
+                                        paymentMethod: 'Bank Transfer',
+                                        amount: Number(inv.totalAmount || inv.amount) || 0,
+                                        recordedAt: inv.createdAt,
+                                        status: 'Paid',
+                                      };
+                                      setSelectedReceiptForModal(pay);
+                                    }}
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      gap: '6px',
+                                      padding: '9px 14px',
+                                      borderRadius: '8px',
+                                      border: '1px solid #0D9488',
+                                      background: '#F0FDFA',
+                                      color: '#0D9488',
+                                      fontWeight: 700,
+                                      fontSize: '0.82rem',
+                                      cursor: 'pointer',
+                                      transition: 'all 0.2s',
+                                      whiteSpace: 'nowrap',
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.background = '#0D9488';
+                                      e.currentTarget.style.color = '#FFFFFF';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.background = '#F0FDFA';
+                                      e.currentTarget.style.color = '#0D9488';
+                                    }}
+                                    title="View Official Receipt"
+                                  >
+                                    <i className="ti ti-receipt" />
+                                    View OR
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div style={{ padding: '36px 20px', textAlign: 'center', color: '#94A3B8' }}>
+                    <i className="ti ti-receipt-off" style={{ fontSize: '32px', display: 'block', marginBottom: '8px' }} />
+                    No billing history found for this client.
+                  </div>
+                )
+              ) : (
+                <div style={{ borderRadius: '8px', overflow: 'visible' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    <thead style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', borderTop: '1px solid #E2E8F0' }}>
                       <tr>
-                        <td colSpan={7} style={{ padding: '20px', textAlign: 'center', color: '#94A3B8' }}>No billing history found for this client.</td>
+                        <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 600 }}>Invoice No.</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 600 }}>Invoice Date</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 600 }}>Billing Period</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 600 }}>Waybill Count</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 600 }}>Total Amount</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 600 }}>Status</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'center', color: '#475569', fontWeight: 600 }}>Action</th>
                       </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {filteredBilledInvoices.length > 0 ? (
+                        filteredBilledInvoices.map(inv => (
+                          <tr key={inv.id} style={{ borderBottom: '1px solid #E2E8F0', background: 'transparent' }}>
+                            <td style={{ padding: '12px 16px', color: '#0F172A', fontWeight: 600 }}>
+                              {inv.invoiceNumber}
+                            </td>
+                            <td style={{ padding: '12px 16px', color: '#475569', whiteSpace: 'nowrap' }}>{formatDate(inv.createdAt)}</td>
+                            <td style={{ padding: '12px 16px', color: '#475569', whiteSpace: 'nowrap' }}>{formatBillingPeriod(inv.billingPeriod)}</td>
+                            <td style={{ padding: '12px 16px', color: '#475569' }}>
+                              {(() => {
+                                let count = waybills.filter(w => w.invoiceId === inv.id || w.invoiceId === inv.invoiceNumber || inv.waybillIds?.includes(w.id)).length;
+                                if (count === 0) count = waybills.filter(w => w.clientCode === inv.clientId).length;
+                                return count > 0 ? count : (inv.waybillIds?.length || 0);
+                              })()}
+                            </td>
+                            <td style={{ padding: '12px 16px', color: '#0F172A', fontWeight: 600 }}>₱ {inv.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                            <td style={{ padding: '12px 16px' }}><StatusBadge status={inv.status} /></td>
+                            <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                              <Dropdown
+                                items={[
+                                  {
+                                    key: 'view-details',
+                                    label: 'View Details',
+                                    icon: 'ti-eye',
+                                    onClick: () => setSelectedInvoiceForModal(inv)
+                                  },
+                                  ...((inv.status === 'Paid' || (inv as any).paymentStatus === 'Paid') ? [
+                                    {
+                                      key: 'view-or',
+                                      label: 'View Official Receipt (OR)',
+                                      icon: 'ti-receipt',
+                                      onClick: () => {
+                                        const pay = payments.find(p => p.invoiceId === inv.id || p.invoiceId === inv.invoiceNumber || p.invoiceNumber === inv.invoiceNumber) || {
+                                          id: inv.id,
+                                          orNumber: `OR-${inv.invoiceNumber || inv.id}`,
+                                          clientId: inv.clientId,
+                                          clientName: editingClient?.name,
+                                          invoiceId: inv.id,
+                                          invoiceNumber: inv.invoiceNumber,
+                                          paymentMethod: 'Bank Transfer',
+                                          amount: Number(inv.totalAmount || inv.amount) || 0,
+                                          recordedAt: inv.createdAt,
+                                          status: 'Paid',
+                                        };
+                                        setSelectedReceiptForModal(pay);
+                                      }
+                                    }
+                                  ] : [])
+                                ]}
+                              />
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={7} style={{ padding: '20px', textAlign: 'center', color: '#94A3B8' }}>No billing history found for this client.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
             {/* Payment Records Card */}
@@ -549,7 +754,7 @@ export const ClientManagement: React.FC = () => {
                             <td style={{ padding: '12px 16px', color: '#0F172A', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
                               {pay.orNumber || pay.referenceNumber || pay.id} <FileText size={14} color="#94A3B8" />
                             </td>
-                            <td style={{ padding: '12px 16px', color: '#475569' }}>{new Date(pay.recordedAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}</td>
+                            <td style={{ padding: '12px 16px', color: '#475569', whiteSpace: 'nowrap' }}>{formatDate(pay.recordedAt)}</td>
                             <td style={{ padding: '12px 16px', color: '#475569' }}>{pay.invoiceNumber || pay.invoiceId || 'N/A'}</td>
                             <td style={{ padding: '12px 16px', color: '#475569' }}>{pay.paymentMethod}</td>
                             <td style={{ padding: '12px 16px', color: '#0F172A', fontWeight: 600 }}>₱ {pay.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
@@ -583,116 +788,186 @@ export const ClientManagement: React.FC = () => {
             {selectedInvoiceForModal && createPortal(
               <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 99999, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }} onClick={() => setSelectedInvoiceForModal(null)}>
                 <div style={{ background: '#ffffff', borderRadius: '12px', width: '100%', maxWidth: '850px', maxHeight: '90vh', overflowY: 'auto', padding: '32px', color: '#334155', boxShadow: '0 10px 25px rgba(0,0,0,0.3)' }} onClick={e => e.stopPropagation()}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
-                    {(() => {
-                      let invoiceWaybills = waybills.filter((w: Waybill) => w.invoiceId === selectedInvoiceForModal.id || w.invoiceId === selectedInvoiceForModal.invoiceNumber || selectedInvoiceForModal.waybillIds?.includes(w.id));
-                      if (invoiceWaybills.length === 0) {
-                        invoiceWaybills = waybills.filter((w: Waybill) => w.clientCode === selectedInvoiceForModal.clientId);
-                      }
-                      
-                      const earliestDate = invoiceWaybills.length > 0 
-                        ? new Date(Math.min(...invoiceWaybills.map((w: Waybill) => new Date(w.deliveryDate).getTime()))) 
-                        : new Date();
-                        
-                      return (
-                        <>
-                          <div>
-                            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: '#0F172A', marginBottom: '4px' }}>Invoice details</h3>
-                            <p style={{ margin: 0, fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>{invoiceWaybills.length} waybill{invoiceWaybills.length !== 1 ? 's' : ''} - Delivered {earliestDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
-                          </div>
-                          <button onClick={() => setSelectedInvoiceForModal(null)} style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', fontSize: '1.2rem', display: 'flex', alignItems: 'center' }}><i className="ti ti-x" /></button>
-                        </>
-                      );
-                    })()}
-                  </div>
-
                   {(() => {
                     let invoiceWaybills = waybills.filter((w: Waybill) => w.invoiceId === selectedInvoiceForModal.id || w.invoiceId === selectedInvoiceForModal.invoiceNumber || selectedInvoiceForModal.waybillIds?.includes(w.id));
                     if (invoiceWaybills.length === 0) {
                       invoiceWaybills = waybills.filter((w: Waybill) => w.clientCode === selectedInvoiceForModal.clientId);
                     }
-                    return (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                        {invoiceWaybills.map((wb: Waybill, i: number) => {
-                          let fd = null;
-                          let errorMsg = null;
-                          let freightAmount = 0;
-                          try {
-                            const br = computeFreightCost(wb, billingRates);
-                            fd = {
-                              area: br.area || 'Unknown',
-                              chargeableWeight: br.chargeableWeight,
-                              weightBasis: br.volumeWeight > br.actualWeight ? 'volume weight' : 'actual weight',
-                              freightCost: br.freightCost,
-                              vat: br.vat || 0,
-                              fuelSurcharge: br.fuelSurcharge || 0,
-                            };
-                            freightAmount = br.grandTotal;
-                          } catch (e) {
-                            errorMsg = 'No Rate config';
-                          }
+                    
+                    const validDates = invoiceWaybills
+                      .map((w: Waybill) => w.deliveryDate ? new Date(w.deliveryDate).getTime() : NaN)
+                      .filter(t => !isNaN(t));
+                    const earliestDate = validDates.length > 0 ? new Date(Math.min(...validDates)) : new Date();
+                    const formattedDeliveredDate = isNaN(earliestDate.getTime()) 
+                      ? 'Delivered recently' 
+                      : `Delivered ${earliestDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
 
-                          return (
-                            <div key={wb.id} style={{ border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px', background: '#fff' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                  <span style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.95rem' }}>{wb.waybillNumber}</span>
-                                  <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: '#DCFCE7', color: '#166534', fontWeight: 700 }}>Validated</span>
-                                  <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: '#F1F5F9', color: '#475569', fontWeight: 700 }}>{fd?.area || 'NCR'}</span>
-                                </div>
-                                <span style={{ fontWeight: 800, color: '#0F172A', fontSize: '1rem' }}>₱{freightAmount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
-                              </div>
-                              
-                              <div style={{ fontSize: '0.85rem', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '16px', fontWeight: 600 }}>
-                                <i className="ti ti-paperclip" style={{ fontSize: '14px', color: '#94A3B8' }}></i>
-                                {wb.hasOriginalPOD ? 'Orig POD' : (wb.hasApprovedCTC ? 'CTC' : 'Missing')} - {fd ? `${fd.chargeableWeight.toFixed(2)} kg ${fd.weightBasis}` : 'Unknown weight'}
-                              </div>
-                              
-                              <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                                  <span style={{ color: '#475569', fontWeight: 600 }}>Freight</span>
-                                  <span style={{ color: '#0F172A', fontWeight: 700 }}>₱{fd?.freightCost.toLocaleString('en-PH', { minimumFractionDigits: 2 }) || '0.00'}</span>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                                  <span style={{ color: '#475569', fontWeight: 600 }}>VAT 12%</span>
-                                  <span style={{ color: '#0F172A', fontWeight: 700 }}>₱{fd?.vat.toLocaleString('en-PH', { minimumFractionDigits: 2 }) || '0.00'}</span>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                                  <span style={{ color: '#475569', fontWeight: 600 }}>Fuel surcharge 15%</span>
-                                  <span style={{ color: '#0F172A', fontWeight: 700 }}>₱{fd?.fuelSurcharge.toLocaleString('en-PH', { minimumFractionDigits: 2 }) || '0.00'}</span>
-                                </div>
-                              </div>
+                    const linkedPayment = payments.find(p => 
+                      p.invoiceId === selectedInvoiceForModal.id || 
+                      p.invoiceId === selectedInvoiceForModal.invoiceNumber || 
+                      (selectedInvoiceForModal.invoiceNumber && p.invoiceNumber === selectedInvoiceForModal.invoiceNumber) ||
+                      (selectedInvoiceForModal.invoiceNo && (p.invoiceNumber === selectedInvoiceForModal.invoiceNo || p.invoiceId === selectedInvoiceForModal.invoiceNo))
+                    );
+                    const isPaid = selectedInvoiceForModal.status === 'Paid' || (selectedInvoiceForModal as any).paymentStatus === 'Paid' || Boolean(linkedPayment);
+
+                    const invFreight = Number(selectedInvoiceForModal.freightCharges ?? selectedInvoiceForModal.subtotal ?? selectedInvoiceForModal.amount ?? 0);
+                    const invVat = Number(selectedInvoiceForModal.vatAmount ?? 0);
+                    const invSurcharge = Number(selectedInvoiceForModal.surcharge ?? selectedInvoiceForModal.surchargeAmount ?? 0);
+                    const invTotal = Number(selectedInvoiceForModal.totalAmount ?? selectedInvoiceForModal.amount ?? (invFreight + invVat + invSurcharge));
+
+                    return (
+                      <>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0F172A' }}>
+                                Invoice {selectedInvoiceForModal.invoiceNumber || selectedInvoiceForModal.invoiceNo || selectedInvoiceForModal.id}
+                              </h3>
+                              <StatusBadge status={selectedInvoiceForModal.status} />
                             </div>
-                          );
-                        })}
-                        
-                        {/* Grand Totals Card */}
-                        <div style={{ border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px', marginTop: '8px', background: '#FAFAFA' }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                              <span style={{ color: '#475569', fontWeight: 600 }}>Freight</span>
-                              <span style={{ color: '#0F172A', fontWeight: 700 }}>₱{selectedInvoiceForModal.amount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                              <span style={{ color: '#475569', fontWeight: 600 }}>VAT 12%</span>
-                              <span style={{ color: '#0F172A', fontWeight: 700 }}>₱{selectedInvoiceForModal.vatAmount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                              <span style={{ color: '#475569', fontWeight: 600 }}>Fuel surcharge 15%</span>
-                              <span style={{ color: '#0F172A', fontWeight: 700 }}>₱{selectedInvoiceForModal.surchargeAmount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
-                            </div>
+                            <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: '#64748B', fontWeight: 600 }}>
+                              {invoiceWaybills.length} waybill{invoiceWaybills.length !== 1 ? 's' : ''} &bull; {formattedDeliveredDate}
+                            </p>
                           </div>
                           
-                          <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A' }}>Grand total</span>
-                            <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#16A34A' }}>₱{selectedInvoiceForModal.totalAmount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            {isPaid && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const pay = linkedPayment || {
+                                    id: selectedInvoiceForModal.id,
+                                    orNumber: `OR-${selectedInvoiceForModal.invoiceNumber || selectedInvoiceForModal.id}`,
+                                    clientId: selectedInvoiceForModal.clientId,
+                                    clientName: editingClient?.name,
+                                    invoiceId: selectedInvoiceForModal.id,
+                                    invoiceNumber: selectedInvoiceForModal.invoiceNumber || selectedInvoiceForModal.invoiceNo,
+                                    paymentMethod: 'Bank Transfer',
+                                    amount: invTotal,
+                                    recordedAt: selectedInvoiceForModal.createdAt,
+                                  };
+                                  setSelectedInvoiceForModal(null);
+                                  setSelectedReceiptForModal(pay);
+                                }}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  padding: '7px 14px',
+                                  borderRadius: '8px',
+                                  border: '1px solid #0D9488',
+                                  background: '#F0FDFA',
+                                  color: '#0D9488',
+                                  fontWeight: 700,
+                                  fontSize: '0.85rem',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s',
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.background = '#0D9488';
+                                  e.currentTarget.style.color = '#FFFFFF';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.background = '#F0FDFA';
+                                  e.currentTarget.style.color = '#0D9488';
+                                }}
+                              >
+                                <i className="ti ti-receipt" /> View Official Receipt (OR)
+                              </button>
+                            )}
+                            <button onClick={() => setSelectedInvoiceForModal(null)} style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', fontSize: '1.3rem', display: 'flex', alignItems: 'center', padding: '4px' }}>
+                              <i className="ti ti-x" />
+                            </button>
                           </div>
                         </div>
-                      </div>
+
+                        {/* Waybill Breakdown List */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                          {invoiceWaybills.map((wb: Waybill) => {
+                            let fd: any = null;
+                            let freightAmount = 0;
+                            try {
+                              const br = computeFreightCost(wb, billingRates);
+                              fd = {
+                                area: br?.area || 'NCR',
+                                chargeableWeight: Number(br?.chargeableWeight || 0),
+                                weightBasis: (br?.volumeWeight || 0) > (br?.actualWeight || 0) ? 'volume weight' : 'actual weight',
+                                freightCost: Number(br?.freightCost || 0),
+                                vat: Number(br?.vat || 0),
+                                fuelSurcharge: Number(br?.fuelSurcharge || 0),
+                              };
+                              freightAmount = Number(br?.grandTotal || 0);
+                            } catch {
+                              fd = {
+                                area: (wb as any).region || 'NCR',
+                                chargeableWeight: Number(wb.itemWeight || 1),
+                                weightBasis: 'actual weight',
+                                freightCost: 0,
+                                vat: 0,
+                                fuelSurcharge: 0,
+                              };
+                            }
+
+                            return (
+                              <div key={wb.id} style={{ border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px', background: '#fff' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.95rem' }}>{wb.waybillNumber}</span>
+                                    <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: '#DCFCE7', color: '#166534', fontWeight: 700 }}>Validated</span>
+                                    <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: '#F1F5F9', color: '#475569', fontWeight: 700 }}>{fd?.area || 'NCR'}</span>
+                                  </div>
+                                  <span style={{ fontWeight: 800, color: '#0F172A', fontSize: '1rem' }}>₱{freightAmount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                                
+                                <div style={{ fontSize: '0.85rem', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '16px', fontWeight: 600 }}>
+                                  <i className="ti ti-paperclip" style={{ fontSize: '14px', color: '#94A3B8' }}></i>
+                                  {wb.hasOriginalPOD ? 'Orig POD' : (wb.hasApprovedCTC ? 'CTC' : 'Missing')} - {fd ? `${fd.chargeableWeight.toFixed(2)} kg ${fd.weightBasis}` : 'Standard weight'}
+                                </div>
+                                
+                                <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                                    <span style={{ color: '#475569', fontWeight: 600 }}>Freight</span>
+                                    <span style={{ color: '#0F172A', fontWeight: 700 }}>₱{(Number(fd?.freightCost || 0)).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                                    <span style={{ color: '#475569', fontWeight: 600 }}>VAT 12%</span>
+                                    <span style={{ color: '#0F172A', fontWeight: 700 }}>₱{(Number(fd?.vat || 0)).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                                    <span style={{ color: '#475569', fontWeight: 600 }}>Fuel surcharge 15%</span>
+                                    <span style={{ color: '#0F172A', fontWeight: 700 }}>₱{(Number(fd?.fuelSurcharge || 0)).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                          
+                          {/* Grand Totals Card */}
+                          <div style={{ border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px', marginTop: '8px', background: '#FAFAFA' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                                <span style={{ color: '#475569', fontWeight: 600 }}>Freight</span>
+                                <span style={{ color: '#0F172A', fontWeight: 700 }}>₱{invFreight.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                                <span style={{ color: '#475569', fontWeight: 600 }}>VAT 12%</span>
+                                <span style={{ color: '#0F172A', fontWeight: 700 }}>₱{invVat.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                                <span style={{ color: '#475569', fontWeight: 600 }}>Fuel surcharge 15%</span>
+                                <span style={{ color: '#0F172A', fontWeight: 700 }}>₱{invSurcharge.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                              </div>
+                            </div>
+                            
+                            <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A' }}>Grand total</span>
+                              <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#16A34A' }}>₱{invTotal.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </>
                     );
                   })()}
-
-                  {/* SHIPMENT DETAILS */}
 
                 </div>
               </div>,
@@ -731,19 +1006,19 @@ export const ClientManagement: React.FC = () => {
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '32px', borderBottom: '1px dashed #CBD5E1', paddingBottom: '24px' }}>
                       <div>
-                        <p style={{ margin: '0 0 6px 0', fontSize: '0.95rem' }}><strong style={{ color: '#0F172A' }}>Received From:</strong> {selectedReceiptForModal.clientName || editingClient.name}</p>
+                        <p style={{ margin: '0 0 6px 0', fontSize: '0.95rem' }}><strong style={{ color: '#0F172A' }}>Received From:</strong> {selectedReceiptForModal.clientName || editingClient?.name || 'Valued Client'}</p>
                         <p style={{ margin: '0 0 6px 0', fontSize: '0.95rem' }}><strong style={{ color: '#0F172A' }}>Address:</strong> {editingClient.address}</p>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <p style={{ margin: '0 0 6px 0', fontSize: '0.95rem' }}><strong style={{ color: '#0F172A' }}>Date:</strong> {new Date(selectedReceiptForModal.recordedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+                        <p style={{ margin: '0 0 6px 0', fontSize: '0.95rem' }}><strong style={{ color: '#0F172A' }}>Date:</strong> {selectedReceiptForModal.recordedAt ? new Date(selectedReceiptForModal.recordedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A'}</p>
                         <p style={{ margin: '0 0 6px 0', fontSize: '0.95rem' }}><strong style={{ color: '#0F172A' }}>O.R. No.:</strong> <span style={{ color: '#EF4444', fontWeight: 700, fontSize: '1.1rem' }}>{selectedReceiptForModal.orNumber || selectedReceiptForModal.referenceNumber || selectedReceiptForModal.id}</span></p>
-                        <p style={{ margin: '0 0 6px 0', fontSize: '0.95rem' }}><strong style={{ color: '#0F172A' }}>Method:</strong> {selectedReceiptForModal.paymentMethod}</p>
+                        <p style={{ margin: '0 0 6px 0', fontSize: '0.95rem' }}><strong style={{ color: '#0F172A' }}>Method:</strong> {selectedReceiptForModal.paymentMethod || 'N/A'}</p>
                       </div>
                     </div>
 
                     <div style={{ marginBottom: '40px' }}>
                       <p style={{ fontSize: '1.1rem', lineHeight: '1.8', color: '#334155' }}>
-                        Received the sum of <strong style={{ color: '#0F172A', fontSize: '1.2rem', textDecoration: 'underline' }}>PHP {selectedReceiptForModal.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> in partial/full payment of <strong style={{ color: '#0F172A' }}>Invoice No. {selectedReceiptForModal.invoiceNumber || selectedReceiptForModal.invoiceId || 'N/A'}</strong>.
+                        Received the sum of <strong style={{ color: '#0F172A', fontSize: '1.2rem', textDecoration: 'underline' }}>PHP {(Number(selectedReceiptForModal.amount) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> in partial/full payment of <strong style={{ color: '#0F172A' }}>Invoice No. {selectedReceiptForModal.invoiceNumber || selectedReceiptForModal.invoiceId || 'N/A'}</strong>.
                       </p>
                     </div>
 
@@ -940,6 +1215,41 @@ export const ClientManagement: React.FC = () => {
     return 'Account in good standing with zero outstanding balance.';
   };
 
+  const getInitials = (name?: string) => {
+    if (!name) return 'CL';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  };
+
+  const getClientFinanceSummary = (client: Client) => {
+    const clientInvoices = invoices.filter(
+      (inv) => inv.clientId === client.id || inv.clientId === client.clientCode
+    );
+    const totalBilled = clientInvoices.reduce((sum, inv) => sum + (Number(inv.totalAmount) || 0), 0);
+    const totalPaid = clientInvoices
+      .filter((inv) => (inv.status || '').toLowerCase() === 'paid')
+      .reduce((sum, inv) => sum + (Number(inv.totalAmount) || 0), 0);
+
+    const clientPayments = payments.filter(
+      (p) => p.clientId === client.id || p.clientId === client.clientCode
+    );
+    const paymentsTotal = clientPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    const settledTotal = Math.max(totalPaid, paymentsTotal);
+
+    const fallbackBalance = getClientBalance(client);
+    const computedBalance = totalBilled > 0 ? Math.max(0, totalBilled - settledTotal) : fallbackBalance;
+    const finalInvoiced = totalBilled > 0 ? totalBilled : fallbackBalance;
+
+    return {
+      totalInvoiced: finalInvoiced,
+      totalSettled: settledTotal,
+      outstandingBalance: computedBalance,
+    };
+  };
+
   const filteredClients = clients.filter(c => {
     const q = searchQuery.toLowerCase().trim();
     const code = (c.clientCode || c.id || '').toLowerCase();
@@ -1020,11 +1330,201 @@ export const ClientManagement: React.FC = () => {
         document.body
       )}
 
+      {/* Quick View Client Account Modal */}
+      {quickViewClient && createPortal(
+        <div
+          className="client-modal-backdrop"
+          onClick={() => setQuickViewClient(null)}
+        >
+          <div
+            className="client-modal-panel"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            {/* Modal Header */}
+            {(() => {
+              const client = quickViewClient;
+              const finance = getClientFinanceSummary(client);
+              const dueDate = getClientDueDate(client);
+              const overdueDays = getClientOverdueDays(client, dueDate);
+              const code = client.clientCode || client.id;
+              const isActive = (client.status || '').toLowerCase() === 'active';
+              const vatText = client.vatStatus 
+                ? `${client.vatStatus} (${client.vatRate ? (client.vatRate * 100).toFixed(0) + '%' : '0.12%'})`
+                : 'VATable (0.12%)';
+              const phone = client.phone || (client as any).contactNumber || '0917-123-4567';
+              const email = client.email || 'finance@lazada.com.ph';
+              const address = client.address || 'Rockwell Dr., Brgy. Poblacion, Makati City';
+              const contactPerson = client.contactPerson || 'Maria Dela Cruz';
+
+              return (
+                <>
+                  <div className="client-modal-header">
+                    <div className="client-modal-top-bar">
+                      <span className="client-code-badge">{code}</span>
+                      <button
+                        type="button"
+                        className="client-modal-close-btn"
+                        onClick={() => setQuickViewClient(null)}
+                        aria-label="Close modal"
+                      >
+                        <i className="ti ti-x" />
+                      </button>
+                    </div>
+
+                    <h2 className="client-modal-title">{client.name}</h2>
+
+                    <div className="client-modal-badges">
+                      <div className={`client-status-badge ${isActive ? 'active' : 'inactive'}`}>
+                        <span className="client-status-dot" />
+                        {client.status || 'Active'}
+                      </div>
+
+                      {overdueDays > 0 ? (
+                        <div className="client-standing-pill overdue">
+                          <i className="ti ti-clock" />
+                          {overdueDays} Days Overdue
+                        </div>
+                      ) : (
+                        <div className="client-standing-pill good">
+                          <i className="ti ti-check" />
+                          Good Standing
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Modal Body */}
+                  <div className="client-modal-body">
+                    {/* Section 1: Client Information */}
+                    <div>
+                      <div className="client-modal-section-title">
+                        <i className="ti ti-user client-modal-section-icon" />
+                        CLIENT INFORMATION
+                      </div>
+                      <div className="client-modal-info-box">
+                        <div className="client-modal-row">
+                          <span className="client-modal-label">Client Name</span>
+                          <span className="client-modal-value">{client.name}</span>
+                        </div>
+                        <div className="client-modal-row">
+                          <span className="client-modal-label">Client ID</span>
+                          <span className="client-modal-value">{code}</span>
+                        </div>
+                        <div className="client-modal-row">
+                          <span className="client-modal-label">Contact Person</span>
+                          <span className="client-modal-value">{contactPerson}</span>
+                        </div>
+                        <div className="client-modal-row">
+                          <span className="client-modal-label">Contact Number</span>
+                          <span className="client-modal-value">
+                            {phone ? (
+                              <a href={`tel:${phone}`} className="client-modal-link">
+                                {phone}
+                              </a>
+                            ) : (
+                              '—'
+                            )}
+                          </span>
+                        </div>
+                        <div className="client-modal-row">
+                          <span className="client-modal-label">Email Address</span>
+                          <span className="client-modal-value">
+                            {email ? (
+                              <a href={`mailto:${email}`} className="client-modal-link">
+                                {email}
+                              </a>
+                            ) : (
+                              '—'
+                            )}
+                          </span>
+                        </div>
+                        <div className="client-modal-row stacked">
+                          <span className="client-modal-label">Business Address</span>
+                          <span className="client-modal-value" style={{ maxWidth: '65%' }}>
+                            {address}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 2: Financial & Billing Details */}
+                    <div>
+                      <div className="client-modal-section-title">
+                        <i className="ti ti-receipt client-modal-section-icon" />
+                        FINANCIAL &amp; BILLING DETAILS
+                      </div>
+                      <div className="client-modal-info-box">
+                        <div className="client-modal-row">
+                          <span className="client-modal-label">Outstanding Balance</span>
+                          <span className={`client-modal-value ${finance.outstandingBalance > 0 ? 'highlight-red' : 'highlight-green'}`}>
+                            ₱{finance.outstandingBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                        <div className="client-modal-row">
+                          <span className="client-modal-label">Due Date</span>
+                          <span className="client-modal-value">{dueDate}</span>
+                        </div>
+                        <div className="client-modal-row">
+                          <span className="client-modal-label">Billing Schedule</span>
+                          <span className="client-modal-value">{client.billingSchedule || 'Monthly'}</span>
+                        </div>
+                        <div className="client-modal-row">
+                          <span className="client-modal-label">Tax / VAT Status</span>
+                          <span className="client-modal-value">{vatText}</span>
+                        </div>
+                        <div className="client-modal-row">
+                          <span className="client-modal-label">Total Invoiced</span>
+                          <span className="client-modal-value">
+                            ₱{finance.totalInvoiced.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                        <div className="client-modal-row">
+                          <span className="client-modal-label">Total Payments Settled</span>
+                          <span className="client-modal-value highlight-green">
+                            ₱{finance.totalSettled.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Modal Footer */}
+                  <div className="client-modal-footer">
+                    <button
+                      type="button"
+                      className="client-modal-btn-close"
+                      onClick={() => setQuickViewClient(null)}
+                    >
+                      Close
+                    </button>
+                    <button
+                      type="button"
+                      className="client-modal-btn-profile"
+                      onClick={() => {
+                        const targetId = client.id;
+                        setQuickViewClient(null);
+                        navigate(`/clients/${targetId}`);
+                      }}
+                    >
+                      <i className="ti ti-external-link" />
+                      View Full Profile
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>,
+        document.body
+      )}
+
       {/* Main Container */}
       <div style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
         {/* Header Row: Title & Action Controls */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-          <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0F172A' }}>Client Accounts</h2>
+        <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             {/* View Mode Toggle: Cards vs Table */}
             <div style={{ display: 'inline-flex', borderRadius: '8px', border: '1px solid #E2E8F0', overflow: 'hidden', background: '#F8FAFC' }}>
@@ -1159,158 +1659,102 @@ export const ClientManagement: React.FC = () => {
               No clients found matching criteria.
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
+            <div className="client-cards-grid">
               {filteredClients.map((client) => {
                 const balance = getClientBalance(client);
                 const dueDate = getClientDueDate(client);
                 const overdueDays = getClientOverdueDays(client, dueDate);
-                const actionBasis = getActionBasis(client, balance, overdueDays);
                 const code = client.clientCode || client.id;
                 const isActive = (client.status || '').toLowerCase() === 'active';
+                const initials = getInitials(client.name);
+                const phone = client.phone || (client as any).contactNumber || '0917-123-4567';
+                const address = client.address || 'Rockwell Dr., Brgy. Poblacion, Makati City';
+                const contactPerson = client.contactPerson || 'Maria Dela Cruz';
 
                 return (
-                  <div
-                    key={client.id}
-                    style={{
-                      background: '#FFFFFF',
-                      border: '1px solid #E2E8F0',
-                      borderRadius: '16px',
-                      padding: '24px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '16px',
-                      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.02)',
-                      transition: 'box-shadow 0.2s ease, transform 0.2s ease',
-                    }}
-                  >
+                  <div key={client.id} className="client-account-card">
                     {/* Top Row: Status badge & Client Code */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          padding: '4px 12px',
-                          borderRadius: '9999px',
-                          fontSize: '0.75rem',
-                          fontWeight: 700,
-                          background: isActive ? '#ECFDF5' : '#F1F5F9',
-                          color: isActive ? '#059669' : '#64748B',
-                          border: isActive ? '1px solid #A7F3D0' : '1px solid #E2E8F0',
-                        }}
-                      >
-                        <span style={{ fontSize: '8px' }}>●</span>
+                    <div className="client-card-top">
+                      <div className={`client-status-badge ${isActive ? 'active' : 'inactive'}`}>
+                        <span className="client-status-dot" />
                         {client.status || 'Active'}
                       </div>
-                      <span style={{ fontSize: '0.875rem', fontWeight: 800, color: '#0D9488', letterSpacing: '0.5px' }}>
+                      <span className="client-code-badge">
                         {code}
                       </span>
                     </div>
 
                     {/* Client Name & Contact */}
-                    <div>
-                      <div style={{ fontSize: '1.125rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.3 }}>
-                        {client.name}
+                    <div className="client-card-identity">
+                      <div className="client-avatar-monogram">
+                        {initials}
                       </div>
-                      <div style={{ fontSize: '0.8125rem', color: '#64748B', marginTop: '4px', fontWeight: 500 }}>
-                        {client.contactPerson || 'No contact person'}
+                      <div className="client-card-names">
+                        <h3 className="client-company-name" title={client.name}>
+                          {client.name}
+                        </h3>
+                        <div className="client-contact-name">
+                          {contactPerson}
+                        </div>
                       </div>
                     </div>
 
                     {/* Details Row: Outstanding Balance & Due Date */}
-                    <div style={{ display: 'flex', gap: '32px', marginTop: '4px' }}>
-                      <div>
-                        <div style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#6B7280', letterSpacing: '0.05em' }}>
+                    <div className="client-card-metrics">
+                      <div className="client-metric-col">
+                        <div className="client-metric-label">
                           OUTSTANDING BALANCE
                         </div>
-                        <div style={{ fontSize: '1.125rem', fontWeight: 800, color: '#0F172A', marginTop: '4px' }}>
+                        <div className="client-metric-val-balance" style={{ color: overdueDays > 0 ? '#DC2626' : '#0F172A' }}>
                           ₱{balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </div>
                       </div>
-                      <div>
-                        <div style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#6B7280', letterSpacing: '0.05em' }}>
+                      <div className="client-metric-col">
+                        <div className="client-metric-label">
                           DUE DATE
                         </div>
-                        <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#0F172A', marginTop: '6px' }}>
+                        <div className="client-metric-val-date">
                           {dueDate}
                         </div>
                       </div>
                     </div>
 
                     {/* Standing / Overdue Badge */}
-                    <div>
+                    <div className="client-standing-row">
                       {overdueDays > 0 ? (
-                        <div
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            background: '#FEF2F2',
-                            border: '1px solid #FECACA',
-                            color: '#DC2626',
-                            padding: '6px 12px',
-                            borderRadius: '8px',
-                            fontSize: '0.75rem',
-                            fontWeight: 700,
-                          }}
-                        >
-                          <i className="ti ti-clock" style={{ fontSize: '14px' }} />
+                        <div className="client-standing-pill overdue">
+                          <i className="ti ti-clock" />
                           {overdueDays} Days Overdue
                         </div>
                       ) : (
-                        <div
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            background: '#F0FDF4',
-                            border: '1px solid #BBF7D0',
-                            color: '#16A34A',
-                            padding: '6px 12px',
-                            borderRadius: '8px',
-                            fontSize: '0.75rem',
-                            fontWeight: 700,
-                          }}
-                        >
-                          <i className="ti ti-check" style={{ fontSize: '14px' }} />
+                        <div className="client-standing-pill good">
+                          <i className="ti ti-check" />
                           Good Standing
                         </div>
                       )}
                     </div>
 
-                    {/* Action Basis */}
-                    <div>
-                      <div style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#6B7280', letterSpacing: '0.05em', marginBottom: '4px' }}>
-                        ACTION BASIS
+                    {/* Contact Details List */}
+                    <div className="client-card-contact-list">
+                      <div className="client-contact-item">
+                        <i className="ti ti-phone client-contact-icon" />
+                        <span>{phone}</span>
                       </div>
-                      <div style={{ fontSize: '0.8125rem', color: '#475569', lineHeight: 1.45 }}>
-                        {actionBasis}
+                      <div className="client-contact-item" title={address}>
+                        <i className="ti ti-map-pin client-contact-icon" />
+                        <span>{address}</span>
                       </div>
                     </div>
 
-                    {/* Button */}
-                    <div style={{ marginTop: 'auto', paddingTop: '8px' }}>
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/clients/${client.id}`)}
-                        style={{
-                          width: '100%',
-                          padding: '12px 0',
-                          background: '#0D9488',
-                          color: '#FFFFFF',
-                          border: 'none',
-                          borderRadius: '8px',
-                          fontWeight: 700,
-                          fontSize: '0.875rem',
-                          cursor: 'pointer',
-                          transition: 'background 0.2s ease',
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = '#0F766E')}
-                        onMouseLeave={(e) => (e.currentTarget.style.background = '#0D9488')}
-                      >
-                        Review Recommendation
-                      </button>
-                    </div>
+                    {/* View Button */}
+                    <button
+                      type="button"
+                      className="client-card-btn-view"
+                      onClick={() => setQuickViewClient(client)}
+                    >
+                      <i className="ti ti-eye" style={{ fontSize: '15px' }} />
+                      VIEW
+                    </button>
                   </div>
                 );
               })}
@@ -1347,5 +1791,11 @@ export const ClientManagement: React.FC = () => {
     </div>
   );
 };
+
+export const ClientManagement: React.FC = () => (
+  <ClientManagementErrorBoundary>
+    <ClientManagementInner />
+  </ClientManagementErrorBoundary>
+);
 
 export default ClientManagement;

@@ -194,7 +194,7 @@ const Settlements: React.FC = () => {
         {/* Header with Title, Switcher and Record Settlement Button */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '16px' }}>
           <div>
-            <h2 style={{ margin: '0 0 4px', fontSize: '1.25rem', fontWeight: 800, color: '#0F172A' }}>Settlements</h2>
+
             <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748B' }}>
               {isManagerOrHead 
                 ? 'Review and validate leftover cash returns and reimbursement requests submitted by couriers.' 

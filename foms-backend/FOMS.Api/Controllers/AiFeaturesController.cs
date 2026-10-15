@@ -135,7 +135,7 @@ public class AiFeaturesController : ApiControllerBase
     }
 
     [HttpPost("documents/upload")]
-    public async Task<IActionResult> UploadDocument([FromForm] IFormFile? file, [FromForm] string? documentType)
+    public async Task<IActionResult> UploadDocument(IFormFile? file, [FromForm] string? documentType)
     {
         IFormFile? targetFile = file;
         if (targetFile == null && Request.HasFormContentType && Request.Form.Files.Count > 0)

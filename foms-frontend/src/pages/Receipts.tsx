@@ -37,6 +37,7 @@ export const Receipts: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [detailViewMode, setDetailViewMode] = useState<'cards' | 'table'>('cards');
   const [detailSearchQuery, setDetailSearchQuery] = useState('');
+  const [selectedReceiptId, setSelectedReceiptId] = useState<string | null>(null);
 
   // Opening modal by setting receiptId query param using replace to avoid polluting browser history
   const handleOpenReceipt = (receiptId: string) => {
@@ -78,10 +79,13 @@ export const Receipts: React.FC = () => {
       tin: rawClient?.tin || (rawClient as any)?.TIN || '000-123-456-000',
     };
 
-    const explicitReceipts = receipts.filter((r: Receipt) => r.clientId === clientIdParam);
+    const explicitReceipts = receipts.filter((r: Receipt) => 
+      r.clientId === clientIdParam || 
+      (rawClient && (r.clientId === rawClient.id || r.clientId === rawClient.clientCode))
+    );
     const clientPayments = payments.filter((p: Payment) => 
-      p.clientId === clientIdParam && 
-      (p.status === 'Validated' || p.status === 'Approved' || (p.status as string) === 'Issued OR')
+      (p.clientId === clientIdParam || (rawClient && (p.clientId === rawClient.id || p.clientId === rawClient.clientCode)) || (client.name && p.clientName && p.clientName.toLowerCase() === client.name.toLowerCase())) && 
+      (p.status === 'Validated' || p.status === 'Approved' || (p.status as string) === 'Paid' || (p.status as string) === 'Settled' || (p.status as string) === 'Issued OR')
     );
 
     const paymentReceipts = clientPayments
@@ -256,6 +260,7 @@ export const Receipts: React.FC = () => {
                     {filteredClientReceipts.map((row: any) => (
                       <div
                         key={row.id}
+                        onClick={() => handleOpenReceipt(row.id)}
                         style={{
                           background: '#FFFFFF',
                           border: '1px solid #E2E8F0',
@@ -267,6 +272,7 @@ export const Receipts: React.FC = () => {
                           gap: '16px',
                           boxShadow: '0 2px 4px rgba(0, 0, 0, 0.02)',
                           transition: 'all 0.2s ease',
+                          cursor: 'pointer',
                         }}
                         onMouseEnter={(e) => {
                           e.currentTarget.style.boxShadow = '0 12px 24px -6px rgba(0, 0, 0, 0.08), 0 4px 8px -4px rgba(0, 0, 0, 0.04)';
@@ -385,13 +391,13 @@ export const Receipts: React.FC = () => {
           </div>
         </Card>
         <ReceiptModal
-          isOpen={Boolean(receiptIdParam)}
-          receiptId={receiptIdParam}
+          isOpen={Boolean(receiptIdParam || selectedReceiptId)}
+          receiptId={receiptIdParam || selectedReceiptId}
           onClose={handleCloseReceipt}
           clients={clients}
           invoices={invoices}
           payments={payments}
-          receipts={receipts}
+          receipts={[...receipts, ...clientReceipts]}
           isLoading={isLoadingReceipts || isLoadingPayments}
         />
       </div>
@@ -404,7 +410,7 @@ export const Receipts: React.FC = () => {
   const relevantClientIds = new Set<string>();
   receipts.forEach((r: Receipt) => relevantClientIds.add(r.clientId));
   payments
-    .filter((p: Payment) => p.status === 'Validated' || p.status === 'Approved' || (p.status as string) === 'Issued OR')
+    .filter((p: Payment) => p.status === 'Validated' || p.status === 'Approved' || (p.status as string) === 'Paid' || (p.status as string) === 'Settled' || (p.status as string) === 'Issued OR')
     .forEach((p: Payment) => relevantClientIds.add(p.clientId));
 
   const listData = Array.from(relevantClientIds).map(clientId => {
@@ -413,10 +419,12 @@ export const Receipts: React.FC = () => {
       c.clientCode === clientId ||
       (c.name && payments.some(p => p.clientId === clientId && p.clientName && p.clientName.toLowerCase() === c.name.toLowerCase()))
     );
-    const clientReceiptsList = receipts.filter((r: Receipt) => r.clientId === clientId);
+    const clientReceiptsList = receipts.filter((r: Receipt) => 
+      r.clientId === clientId || (client && (r.clientId === client.id || r.clientId === client.clientCode))
+    );
     const clientValidatedPayments = payments.filter((p: Payment) => 
-      p.clientId === clientId && 
-      (p.status === 'Validated' || p.status === 'Approved' || (p.status as string) === 'Issued OR')
+      (p.clientId === clientId || (client && (p.clientId === client.id || p.clientId === client.clientCode)) || (client && p.clientName && p.clientName.toLowerCase() === client.name.toLowerCase())) && 
+      (p.status === 'Validated' || p.status === 'Approved' || (p.status as string) === 'Paid' || (p.status as string) === 'Settled' || (p.status as string) === 'Issued OR')
     );
 
     const receiptTotal = clientReceiptsList.reduce((acc: number, r: Receipt) => acc + (Number(r.amount) || 0), 0);
@@ -448,8 +456,8 @@ export const Receipts: React.FC = () => {
         {/* Header Row: Title & View Mode Toggle */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0F172A' }}>Official Receipts</h2>
-            <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: '#64748B' }}>Issued tax receipts, client records, and payment certificate history</p>
+
+            <p style={{ margin: 0, fontSize: '0.82rem', color: '#64748B' }}>Issued tax receipts, client records, and payment certificate history</p>
           </div>
 
           {/* Cards vs Table View Switcher */}
@@ -681,8 +689,8 @@ export const Receipts: React.FC = () => {
         )}
       </div>
       <ReceiptModal
-        isOpen={Boolean(receiptIdParam)}
-        receiptId={receiptIdParam}
+        isOpen={Boolean(receiptIdParam || selectedReceiptId)}
+        receiptId={receiptIdParam || selectedReceiptId}
         onClose={handleCloseReceipt}
         clients={clients}
         invoices={invoices}

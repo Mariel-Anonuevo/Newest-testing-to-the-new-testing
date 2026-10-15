@@ -17,7 +17,7 @@ import { ratesService } from '../services/ratesService';
 import { auditLogsService } from '../services/auditLogsService';
 import type { Invoice, Waybill, Client, BillingRate } from '../types/entities';
 import { computeFreightCost } from '../utils/billing';
-import { formatCurrency, formatDate } from '../utils/format';
+import { formatCurrency, formatDate, formatBillingPeriod } from '../utils/format';
 import '../components/FormModals.css';
 
 export const InvoiceReview: React.FC = () => {
@@ -324,7 +324,15 @@ export const InvoiceReview: React.FC = () => {
             data={sortedInvoices}
             columns={[
               { key: 'invoiceNumber', label: 'Invoice No.', sortable: true },
-              { key: 'billingPeriod', label: 'Billing Period' },
+              {
+                key: 'billingPeriod',
+                label: 'Billing Period',
+                render: (row: any) => (
+                  <span style={{ whiteSpace: 'nowrap' }}>
+                    {formatBillingPeriod(row.billingPeriod)}
+                  </span>
+                )
+              },
               { key: 'createdAt', label: 'Date', render: (row: any) => formatDate(row.createdAt) },
               { key: 'dueDate', label: 'Due Date', render: (row: any) => formatDate(row.dueDate) },
               { key: 'totalAmount', label: 'Amount', render: (row: any) => formatCurrency(row.totalAmount) },

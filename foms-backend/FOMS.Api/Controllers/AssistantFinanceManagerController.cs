@@ -203,7 +203,7 @@ public class AssistantFinanceManagerController : ControllerBase
 
     // 3. AI Duplicate Scan
     [HttpPost("ai/duplicate-scan")]
-    public async Task<IActionResult> DuplicateScan([FromForm] IFormFile? file)
+    public async Task<IActionResult> DuplicateScan(IFormFile? file)
     {
         if (file == null || file.Length == 0)
             return BadRequest(new { success = false, message = "File is required." });
@@ -314,7 +314,7 @@ public class AssistantFinanceManagerController : ControllerBase
 
     // 4. Document Extraction
     [HttpPost("ai/document-extraction")]
-    public async Task<IActionResult> DocumentExtraction([FromForm] IFormFile? file)
+    public async Task<IActionResult> DocumentExtraction(IFormFile? file)
     {
         if (file == null || file.Length == 0)
             return BadRequest(new { success = false, message = "File is required." });

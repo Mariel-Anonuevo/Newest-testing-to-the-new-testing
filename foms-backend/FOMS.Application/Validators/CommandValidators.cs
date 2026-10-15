@@ -226,7 +226,7 @@ public class CreateAdjustmentCommandValidator : AbstractValidator<AdjustmentFeat
 
         RuleFor(x => x.Reason)
             .NotEmpty().WithMessage("Reason is required.")
-            .MinimumLength(3).WithMessage("Reason must be at least 3 characters.")
+            .MinimumLength(10).WithMessage("Reason must be at least 10 characters.")
             .MaximumLength(1000).WithMessage("Reason cannot exceed 1000 characters.")
             .Must(ValidationHelpers.NotContainHtml).WithMessage("Reason contains invalid characters.");
 

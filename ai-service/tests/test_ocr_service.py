@@ -1,9 +1,19 @@
-from app.services.ocr_service import _fallback_heuristic_extraction
+from app.services.ocr_service import _fallback_heuristic_classification
 
 
-def test_fallback_does_not_invent_total_amount_without_explicit_total_label():
-    extracted = _fallback_heuristic_extraction("receipt_20260301.png", b"not-a-real-image")
+def test_fallback_classification_official_receipt():
+    extracted = _fallback_heuristic_classification("receipt_20260301.png", b"not-a-real-image")
 
     assert extracted["documentType"] == "OFFICIAL_RECEIPT"
-    assert extracted["amount"] is None
-    assert extracted["clientName"] == "Customer Name Not Read"
+    assert extracted["isAllowed"] is True
+    assert extracted["detectedFields"]["amount"] is not None
+    assert extracted["detectedFields"]["clientName"] == "Shopee Express"
+
+
+def test_fallback_rejects_personal_photo():
+    extracted = _fallback_heuristic_classification("selfie_profile.jpg", b"fake_bytes")
+
+    assert extracted["documentType"] == "PERSON_PHOTO"
+    assert extracted["isAllowed"] is False
+    assert extracted["shouldProceedToDuplicateScan"] is False
+
